@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "queue.cpp"
+#include "queue.h"
 
 using std::cout;
 using std::cerr;
@@ -35,6 +35,7 @@ void testQueue()
     CQueue<int> test_q(3);
     int res;
 
+    UTests::AssertEq<bool>(3, test_q.size());
     UTests::AssertEq<bool>(true, test_q.empty());
 
     test_q.push(1);
@@ -57,8 +58,8 @@ void testQueue()
     UTests::AssertEq<int>(3, test_q.length());
     UTests::AssertEq<bool>(true, test_q.full());
 
+    cout << "Expect error message" << endl;
     test_q.push(6);
-    // cout msg; currently not testable
     
     test_q.pop(res);
     UTests::AssertEq(1, res);
@@ -89,6 +90,8 @@ void testQueue()
     UTests::AssertEq<int>(1, test_q.length());
     UTests::AssertEq<bool>(false, test_q.full());
     UTests::AssertEq<bool>(false, test_q.empty());
+
+    UTests::PrintTestsResult();
 }
 
 int main () {

@@ -3,7 +3,7 @@
 // something power of 2
 const unsigned DEFAULT_SIZE = 16; 
 
-template<typename T>
+template <typename T>
 // circular queue
 class CQueue {
     private:
@@ -28,4 +28,8 @@ class CQueue {
 
         // number of items currently in the CQueue
         unsigned length() const;
+        unsigned size() const;
 };
+
+
+template class CQueue<int>;
