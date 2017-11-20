@@ -12,6 +12,8 @@ class LList
 {
     private:
         Node<T>* m_head;
+        Node<T>* tailNode();
+
         void del();
         void copy(LList<T> const& list);
 
