@@ -50,6 +50,9 @@ class MLList
 
         T getAt(unsigned position);                   // Gets the value of the n-th element (from 0)
         bool updateAt(T new_data, unsigned position); // Updates the value of the n-th element
+
+        void reverse();
+        void splitInTwo(MLList&, MLList&);
 };
 
 template <class T>
@@ -286,4 +289,54 @@ bool MLList<T>::removeAt(unsigned position) {
 
     // Idx out of list bounds
     return false;
+}
+
+/**********************************************************************
+*                         Custom operations                          *
+**********************************************************************/
+template <class T>
+void MLList<T>::reverse() {
+    if (size() < 2)
+        return;
+
+    Node<T> *first = m_head,
+            *sec = first->link,
+            *third;
+
+    if (size() > 2) {
+        third = sec->link;
+    }
+
+    while (third) {
+        sec->link = first;
+
+        first = sec;
+        sec = third;
+        third = sec->link;
+    }
+
+    // and the last elements
+    sec->link = first;
+    m_head = sec;
+}
+
+template <class T>
+void MLList<T>::splitInTwo(MLList<T>& left, MLList<T>& right) {
+    Node<T> *iterator = m_head,
+            *skipping;   
+    
+    if (size() == 0)
+        return;
+
+    skipping = iterator->link;
+
+    while(skipping) {
+        left.push(iterator->data);
+        iterator = iterator->next;
+        skipping = skipping->link ? skipping->link->link : nullptr;
+    }
+    while(iterator) {
+        right.push(iterator->data);
+        iterator = iterator->next;
+    }
 }
