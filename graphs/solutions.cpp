@@ -1,21 +1,11 @@
 #include "graph.cpp"
 #include <algorithm>
 #include <iostream>
+#include <queue>
 #include <vector>
 
 using namespace std;
 
-struct PathNode {
-    PathNode* parent;
-    char data;
-
-    PathNode(){};
-    PathNode(PathNode* _parent, char _data)
-        : parent(_parent)
-        , data(_data)
-    {
-    }
-};
 
 class ExtendedGraph : public DirGraph<char> {
 public:
@@ -64,6 +54,7 @@ public:
         return reversedGraph;
     }
 
+    /// DFS
     bool findPathRec(const char& a, const char& b, list<char>& path, vector<char> excludedVertices, int length, int maxLength)
     {
         if (length > maxLength) {
@@ -94,91 +85,98 @@ public:
     }
 
     ///
-    /// Use `excludedVertices` also for visited notes
-    list<char> findShortesPath(const char &a, const char &b, vector<char> excludedVertices)
+    /// BFS Use `excludedVertices` also for visited notes
+    ///
+    list<char> findShortestPath(const char& a, const char& b, vector<char> excludedVertices)
     {
         // add node if not visited or not excluded
 
+        // aplicable for small graph numbers
+        // can be changed to hash table
+        /// In position i keeps the index (value) of parent node from the bfs
+        vector<char> parents(sizeof(char) * 8);
+        // Better than bool[] as it may be space optimised
+        //  http://en.cppreference.com/w/cpp/container/vector_bool
+        // Initialize a vector of all possible values for elements in the graph; Set `false` for all
+        vector<bool> visited(256, false);
 
-        vector<PathNode> nodes;
+        queue<char> pendingNodes;
 
-        nodes.push_back(PathNode(NULL, a));
+        pendingNodes.push(a);
+        visited[a] = true;
 
-        PathNode checkedNode,
-                 foundNode;
+        char currentNode,
+            finalNode;
         bool found = false;
-        while (!nodes.empty())
-        {
-            checkedNode = nodes.back();
-            nodes.pop_back();
+        while (!pendingNodes.empty() && !found) {
+            currentNode = pendingNodes.front();
+            pendingNodes.pop();
 
-            /// add it's neighbours
-            // find the node rels
-            auto verticesIt = linkedGraph.begin();
-            for (; verticesIt != linkedGraph.end() &&
-                    verticesIt->front() != checkedNode.data;
-                    verticesIt++) {}
+            /// add it's neighbours to be searched in
+            list<char>* vertexRels = getVertexRels(currentNode);
+            auto vertexRelsIt = vertexRels->begin();
+            vertexRelsIt++; // skip the node itself
+            for (; vertexRelsIt != vertexRels->end(); vertexRelsIt++) {
+                char nextNode = *vertexRelsIt;
+                bool isVisited = visited[nextNode],
+                     isExcluded = excludedVertices.end() != find(excludedVertices.begin(), excludedVertices.end(), nextNode);
 
-            auto vertexRelsIt = verticesIt->begin();
-            for (; vertexRelsIt != verticesIt->end(); vertexRelsIt++)
-            {
-                if (*vertexRelsIt == b)
-                {
-                    foundNode = PathNode(&checkedNode, *vertexRelsIt);
-                    found = true;
-                }
-                // is not yet visited or excluded
-                if (find(excludedVertices.begin(), excludedVertices.end(), *vertexRelsIt) == excludedVertices.end())
-                {
-                    nodes.push_back(PathNode(&checkedNode, *vertexRelsIt));
-                    excludedVertices.push_back(*vertexRelsIt);
+                if (!isVisited && !isExcluded) {
+                    pendingNodes.push(nextNode);
+                    // and mark it as visited...
+                    visited[nextNode] = true;
+                    parents[nextNode] = currentNode;
+
+                    // Have we finally found it...
+                    if (nextNode == b) {
+                        finalNode = nextNode;
+                        found = true;
+                    }
                 }
             }
         }
 
-        if (!found)
-        {
+        if (!found) {
             // just return an empty path
             return list<char>();
         }
 
+        /// Build the path, backtracing in the `parents` array
         list<char> path;
-        // build path
-        while (foundNode.parent)
-        {
-            path.push_front(foundNode.data);
+        while (finalNode != '\0') {
+            path.push_front(finalNode);
+            finalNode = parents[finalNode];
         }
         return path;
     }
 };
 
-
 /**********************************************************************
 *                               TESTS                                *
 **********************************************************************/
 
-
-using std::cout;
 using std::cerr;
+using std::cout;
 using std::endl;
 
 int tests_counter = 0;
 int failed_tests_counter = 0;
 
 class UnitTests {
-    public:
-        template <typename T>
-            static void AssertEq(T expected, T value) {
-                tests_counter++;
-                if (expected != value) {
-                    cerr << "FAIL(" << tests_counter << "): Values mismatch!" << "\n-- expected: " << expected << "\n---- actual: " << value << endl; 
-                    failed_tests_counter++;
-                } else {
-                    cout << "." << endl;
-                }
-            }
+public:
+    template <typename T>
+    static void AssertEq(T expected, T value)
+    {
+        tests_counter++;
+        if (expected != value) {
+            cerr << "FAIL(" << tests_counter << "): Values mismatch!"
+                 << "\n-- expected: " << expected << "\n---- actual: " << value << endl;
+            failed_tests_counter++;
+        } else {
+            cout << "." << endl;
+        }
+    }
 };
-
 
 void testGraph()
 {
@@ -222,7 +220,6 @@ void testGraph()
     UnitTests::AssertEq(true, graph.hasEdge(1, 2));
     UnitTests::AssertEq(true, graph.hasEdge(1, 4));
 
-
     graph.addEdge(3, 2);
     graph.addEdge(2, 1);
 
@@ -233,8 +230,8 @@ void testGraph()
     UnitTests::AssertEq(true, graph.hasEdge(1, 4));
 }
 
-
-void testMatchWord(ExtendedGraph& graph) {
+void testMatchWord(ExtendedGraph& graph)
+{
     cout << "----- matchWork TESTS -----" << endl;
     // matchWord
     UnitTests::AssertEq(true, graph.matchWord(""));
@@ -245,10 +242,10 @@ void testMatchWord(ExtendedGraph& graph) {
     UnitTests::AssertEq(false, graph.matchWord("abcde"));
     UnitTests::AssertEq(false, graph.matchWord("ae"));
     UnitTests::AssertEq(true, graph.matchWord("ada"));
-
 }
 
-void testReversedGraph(ExtendedGraph &graph) {
+void testReversedGraph(ExtendedGraph& graph)
+{
     cout << "----- reverseGraph TESTS -----" << endl;
 
     ExtendedGraph reversedGraph = graph.reversedGraph();
@@ -261,7 +258,8 @@ void testReversedGraph(ExtendedGraph &graph) {
     UnitTests::AssertEq(true, reversedGraph.hasEdge('d', 'c'));
 }
 
-void testFindPath(ExtendedGraph &graph) {
+void testFindPath(ExtendedGraph& graph)
+{
     cout << "----- findPath TESTS -----" << endl;
 
     list<char> path;
@@ -272,7 +270,19 @@ void testFindPath(ExtendedGraph &graph) {
     UnitTests::AssertEq<int>(4, path.size()); // it should include more than just 'a' and 'd'
 }
 
-void testGraphUtils() {
+void testFindShortestPath(ExtendedGraph& graph)
+{
+    cout << "----- findShortestPath TESTS -----" << endl;
+
+    vector<char> exVertices;
+    list<char> path = graph.findShortestPath('a', 'c', exVertices);
+    UnitTests::AssertEq('a', path.front());
+    UnitTests::AssertEq('c', path.back());
+    UnitTests::AssertEq<int>(3, path.size()); // it should include more than just 'a' and 'd'
+}
+
+void testGraphUtils()
+{
     cout << "--- GRAPH UTILS TESTS ---" << endl;
 
     ExtendedGraph graph;
@@ -283,7 +293,6 @@ void testGraphUtils() {
 
     graph.addEdge('a', 'd');
     graph.addEdge('d', 'a');
-
     graph.addEdge('a', 'b');
     graph.addEdge('b', 'c');
     graph.addEdge('c', 'd');
@@ -291,13 +300,13 @@ void testGraphUtils() {
     testMatchWord(graph);
     testReversedGraph(graph);
     testFindPath(graph);
+    testFindShortestPath(graph);
 }
 
 int main()
 {
     testGraph();
     testGraphUtils();
-
 
     return 0;
 }
